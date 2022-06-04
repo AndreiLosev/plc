@@ -1,10 +1,10 @@
-mod task_error;
+mod task_errors;
 
 use std::time::{Duration, Instant};
 use std::error;
 use std::result;
 use rmodbus::server::context::ModbusContext;
-use task_error::TaskTimeOutError;
+use task_errors::{TaskTimeOutError, TaskOtherError};
 
 pub trait Program {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
@@ -12,9 +12,10 @@ pub trait Program {
 
 pub struct Task {
     name: &'static str,
-    programs: [Box<dyn Program>; 32],
+    programs: Vec<Box<dyn Program>>,
     priority: u8,
     event: Event,
+    work_time: Option<Instant>,
 }
 
 #[derive(Clone, Copy)]
@@ -28,10 +29,10 @@ pub enum Event {
 impl Task {
     pub fn new(
         name: &'static str,
-        programs: [Box<dyn Program>; 32],
+        programs: Vec<Box<dyn Program>>,
         priority: u8,
         event: Event,
-    ) -> Self { Self { name, programs, priority, event } }
+    ) -> Self { Self { name, programs, priority, event, work_time: None } }
 
     pub fn get_priority(&self) -> u8 { self.priority }
 
@@ -39,48 +40,53 @@ impl Task {
 
     pub fn get_name(&self) -> &str { self.name }
 
-    pub fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
+    pub fn run(&mut self, context: &mut ModbusContext, task_num: usize) -> result::Result<usize, Box<dyn error::Error>> {
 
-        let cycle_event = self.run_cycle_event_timer();
-
-        for prog in self.programs.iter_mut() {
-            prog.run(context)?
+        if task_num > self.programs.len() {
+            let e = TaskOtherError::new("Task::run(), task_num > self.programs.len()");
+            return Err(Box::new(e));
         }
 
-        Ok(())
+        if task_num == 0 {
+            self.work_time = Some(Instant::now());
+        }
 
-        // match cycle_event {
-        //     Some((time_left, set_time)) => {
-        //         if time_left.elapsed() > set_time {
-        //             let e = TaskTimeOutError::new(
-        //                 time_left.elapsed(),
-        //                 self.name,
-        //                 set_time
-        //             ); 
-        //             Err(e)
-        //         } else {
-        //             Ok(())
-        //         }
-        //     }
-        //     _ => Ok(())
-        // }
+        self.programs[task_num].run(context)?;
+
+        if task_num == self.programs.len() {
+            self.stop_time_work()?;
+            return Ok(0);
+        }
+
+        Ok(task_num + 1)
     }
 
-    fn run_cycle_event_timer(&self) -> Option<(Instant, Duration)> {
+    fn stop_time_work(&mut self) -> result::Result<(), Box<dyn error::Error>> {
         let set_time = match self.event {
-            Event::Cycle(v) => Some(v),
-            _ => None,
+            Event::Cycle(v) => v,
+            _ => Duration::from_millis(250),
         };
 
-        let start_time = match set_time {
-            Some(_) => Some(Instant::now()),
-            None => None,
-        };
+        let work_time = self.work_time;
+        self.work_time = None;
 
-        if set_time.is_none() || start_time.is_none() {
-            return None;
+        match work_time {
+            Some(v) => {
+                if v.elapsed() > set_time {
+                    let e = TaskTimeOutError::new(
+                        v.elapsed(),
+                        self.name,
+                        set_time
+                    ); 
+                    return Err(Box::new(e));
+                }
+
+                Ok(())
+            },
+            None => Err(Box::new(TaskOtherError::new(
+                "Task::stop_time_work(), self.work_time is Null",
+            ))),
         }
-
-        Some((start_time.unwrap(), set_time.unwrap()))
     }
+
 }

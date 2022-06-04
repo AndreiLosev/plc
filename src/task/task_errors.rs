@@ -26,6 +26,19 @@ impl fmt::Display for TaskTimeOutError {
     }
 }
 
-impl error::Error for TaskTimeOutError {
-    
+impl error::Error for TaskTimeOutError {}
+
+#[derive(Debug)]
+pub struct TaskOtherError(&'static str);
+
+impl TaskOtherError {
+    pub fn new(mess: &'static str) -> Self { Self(mess) }
 }
+
+impl fmt::Display for TaskOtherError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TaskOtherError, message: {}", self.0)
+    }
+}
+
+impl error::Error for TaskOtherError {}
