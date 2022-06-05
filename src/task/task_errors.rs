@@ -22,7 +22,7 @@ impl fmt::Display for TaskTimeOutError {
         let set_time = self.set_time.as_millis();
         let time_left = self.time_left.as_millis();
 
-        write!(f, "task: {}, TaskTimeOutError, time set: {},  time left{}", self.name, set_time, time_left)
+        write!(f, "task: {}, TaskTimeOutError, time set: {},  time left: {}", self.name, set_time, time_left)
     }
 }
 
