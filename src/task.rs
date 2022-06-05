@@ -26,6 +26,11 @@ pub enum Event {
     Interrupt(&'static str),
 }
 
+pub struct TaskSettings {
+    max_work_time_for_not_cycle_task: Duration,
+    return_time_work: Duration,
+}
+
 impl Task {
     pub fn new(
         name: &'static str,
@@ -40,7 +45,12 @@ impl Task {
 
     pub fn get_name(&self) -> &str { self.name }
 
-    pub fn run(&mut self, context: &mut ModbusContext, task_num: usize) -> result::Result<usize, Box<dyn error::Error>> {
+    pub fn run(
+        &mut self,
+        context: &mut ModbusContext,
+        task_num: usize,
+        settings: TaskSettings,
+    ) -> result::Result<usize, Box<dyn error::Error>> {
 
         if task_num > self.programs.len() {
             let e = TaskOtherError::new("Task::run(), task_num > self.programs.len()");
@@ -54,17 +64,29 @@ impl Task {
         self.programs[task_num].run(context)?;
 
         if task_num == self.programs.len() {
-            self.stop_time_work()?;
+            self.stop_time_work(settings)?;
             return Ok(0);
+        }
+
+        if let Some(i) = self.work_time {
+            if i.elapsed() > settings.return_time_work {
+                let e = TaskTimeOutError::new(
+                    i.elapsed(),
+                    self.name,
+                    settings.return_time_work,
+                );
+
+                return Err(Box::new(e));
+            }
         }
 
         Ok(task_num + 1)
     }
 
-    fn stop_time_work(&mut self) -> result::Result<(), Box<dyn error::Error>> {
+    fn stop_time_work(&mut self, settings: TaskSettings) -> result::Result<(), Box<dyn error::Error>> {
         let set_time = match self.event {
             Event::Cycle(v) => v,
-            _ => Duration::from_millis(250),
+            _ => settings.max_work_time_for_not_cycle_task,
         };
 
         let work_time = self.work_time;
