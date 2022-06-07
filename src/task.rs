@@ -27,8 +27,8 @@ pub enum Event {
 }
 
 pub struct TaskSettings {
-    max_work_time_for_not_cycle_task: Duration,
-    return_time_work: Duration,
+    pub max_work_time_for_not_cycle_task: Duration,
+    pub return_time_work: Duration,
 }
 
 impl Task {
@@ -174,8 +174,6 @@ fn test_task_is_work() {
 
 #[test]
 fn test_task_is_error() {
-
-    use std::any::{Any, TypeId};
 
     let mut context = ModbusContext::new();
     

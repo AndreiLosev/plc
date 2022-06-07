@@ -1,0 +1,6 @@
+{
+    task_setting: {
+        max_work_time_for_not_cycle_task: 500,
+        return_time_work: 1000,   
+    }
+}
