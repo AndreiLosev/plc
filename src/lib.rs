@@ -1,4 +1,5 @@
 pub mod task;
+pub mod pls_std;
 mod config;
 
 use rmodbus::server::context::ModbusContext;
@@ -39,18 +40,11 @@ impl Plc {
     }
 
     fn config_adapter(yaml_config: config::General) -> Config {
-        Config {
-            task_settings: task::TaskSettings {
-                max_work_time_for_not_cycle_task: time::Duration::from_millis(yaml_config.task_setting.max_work_time_for_not_cycle_task),
-                return_time_work: time::Duration::from_millis(yaml_config.task_setting.return_time_work),
-            },
-        }
+        Config {}
     }
 }
 
-struct Config {
-    task_settings: task::TaskSettings,
-}
+struct Config {}
 
 #[test]
 fn test_plc() {
