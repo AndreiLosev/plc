@@ -1,5 +1,5 @@
 use std::{fmt, error, any, mem};
-use std::ops::{BitAnd, Shr};
+use std::ops::{BitAnd, Shr, Shl, BitOr, BitXor};
 use std::cmp::PartialEq;
 
 #[derive(Debug)]
@@ -23,7 +23,16 @@ impl fmt::Display for Overflow {
 
 impl error::Error for Overflow {}
 
-trait BitWord: From<u8> + Shr<Output = Self> + BitAnd<Output = Self> + PartialEq<Self> {
+pub trait BitWord:
+    From<u8> +
+    Shr<Output = Self> +
+    Shl<Output = Self> +
+    BitAnd<Output = Self> +
+    PartialEq<Self> +
+    BitOr<Output = Self> +
+    BitXor<Output = Self> +
+    Copy
+{
     fn get_bit(self, pos: u8) -> Result<bool, Overflow> {
         if pos > (mem::size_of::<Self>() * 8) as u8 {
             return Err(Overflow::new(self, pos));
@@ -33,23 +42,41 @@ trait BitWord: From<u8> + Shr<Output = Self> + BitAnd<Output = Self> + PartialEq
     
         Ok((x & Self::from(1_u8)) == Self::from(1_u8))
     }
-    // fn set_bit(pos: usize, value: bool) -> Result<bool, Overflow>;
+    fn set_bit(&mut self, pos: u8, bit: bool) -> Result<(), Overflow> {
+        if pos > (mem::size_of::<Self>() * 8) as u8 {
+            return Err(Overflow::new(self, pos));
+        }
+
+        let x = Self::from(1_u8) << Self::from(pos);
+
+        match bit {
+            true => *self = *self | x,
+            false => {
+                *self = match self.get_bit(pos).unwrap() {
+                    true => *self ^ x,
+                    false => *self,
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
+impl BitWord for u8 {}
 impl BitWord for u16 {}
-
+impl BitWord for u32 {}
+impl BitWord for u64 {}
+impl BitWord for u128 {}
+impl BitWord for i128 {}
+impl BitWord for i64 {}
+impl BitWord for i32 {}
+impl BitWord for i16 {}
+impl BitWord for usize {}
+impl BitWord for isize {}
 
 #[test]
 fn test_bitword() {
-    let res = vec![
-        15_u16.get_bit(0).unwrap(),
-        15_u16.get_bit(1).unwrap(),
-        15_u16.get_bit(2).unwrap(),
-        15_u16.get_bit(3).unwrap(),
-        15_u16.get_bit(4).unwrap(),
-    ];
-
-    dbg!(res);
 
     assert!(false);
 }
