@@ -9,7 +9,7 @@ use std::result;
 use rmodbus::server::context::{ModbusContext};
 use rmodbus::ErrorKind;
 use task_errors::{TaskTimeOutError, TaskOtherError};
-use pls_std::bitword;
+use pls_std::bitword::BitWord;
 
 pub trait Program {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
@@ -40,13 +40,13 @@ impl Task {
         Self { name, programs, priority, event: Event::Cycle((cycle, Instant::now())) }
     }
 
-    pub fn new_discrete_input_front(
+    pub fn new_front_discrete_input(
         name: &'static str,
         programs: Vec<Box<dyn Program>>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
-        Self { name, programs, priority, event: Event::DiscreteInputFront((bit_addr, false)) }
+        Self { name, programs, priority, event: Event::DiscreteInputFront((bit_addr, true)) }
     }
 
     pub fn new_background(
