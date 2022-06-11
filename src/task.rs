@@ -7,7 +7,6 @@ use std::time::{Duration, Instant};
 use std::error;
 use std::result;
 use rmodbus::server::context::{ModbusContext};
-use rmodbus::ErrorKind;
 use task_errors::{TaskTimeOutError, TaskOtherError};
 use pls_std::bitword::BitWord;
 
@@ -26,7 +25,7 @@ pub struct Task {
 pub enum Event {
     Cycle((Duration, Instant)),
     Background,
-    DiscreteInputFront((u16, bool)),
+    DiscreteInputFront((u16, u8)),
 }
 
 impl Task {
@@ -46,7 +45,7 @@ impl Task {
         priority: u8,
         bit_addr: u16,
     ) -> Self {
-        Self { name, programs, priority, event: Event::DiscreteInputFront((bit_addr, true)) }
+        Self { name, programs, priority, event: Event::DiscreteInputFront((bit_addr, 4)) }
     }
 
     pub fn new_background(
@@ -77,34 +76,60 @@ impl Task {
         }
 
         if task_num == 0 {
-            self.task_start();
+            self.after_start();
         }
 
         self.programs[task_num].run(context)?;
 
         if task_num == (self.programs.len() - 1) {
+            self.before_complit()?;
             return Ok(0);
         }
 
         Ok(task_num + 1)
     }
 
-    fn task_start(&mut self) {
+    pub fn need_run(&mut self, context: &ModbusContext) -> result::Result<bool, Box<dyn error::Error>> {
+        match &mut self.event {
+            Event::Cycle((t, i)) => Ok(*t <= i.elapsed()),
+            Event::DiscreteInputFront((addr, b)) => {
+                let first = b.get_bit(0)?;
+                let bit = context.get_discrete(*addr)?;
+
+                b.set_bit(1, first)?;
+                b.set_bit(0, bit)?;
+
+                let first = b.get_bit(0)?;
+                let second = b.get_bit(1)?;
+                let third = b.get_bit(2)?;
+
+                Ok(first && !second && third)
+            },
+            Event::Background => Ok(false),
+        }
+    }
+
+    fn after_start(&mut self) {
         match &mut self.event {
             Event::Cycle((_, i)) => { *i = Instant::now(); },
-            Event::DiscreteInputFront((_, b)) => { *b = true; },
+            Event::DiscreteInputFront((_, b)) => { b.set_bit(2, false).unwrap(); },
             Event::Background => (),
         }
     }
 
-    pub fn launch_now(&mut self, context: &ModbusContext) -> result::Result<bool, ErrorKind> {
+    fn before_complit(&mut self) -> result::Result<(), Box<dyn error::Error>> {
         match &mut self.event {
-            Event::Cycle((t, i)) => Ok(*t <= i.elapsed()),
-            Event::DiscreteInputFront((a, b)) => {
-                let discrets_input = context.get_discrete(*a)?;
-                Ok(discrets_input && !*b)
+            Event::DiscreteInputFront((_, b)) => {
+                b.set_bit(2, true).unwrap();
+                Ok(())
             },
-            Event::Background => Ok(false),
+            Event::Cycle((t, i)) => {
+                if i.elapsed() > *t {
+                    return Err(Box::new(TaskTimeOutError::new(i.elapsed(), self.name, *t)));
+                }
+                Ok(())
+            },
+            Event::Background => Ok(()) 
         }
     }
 
