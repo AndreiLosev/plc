@@ -4,10 +4,9 @@ mod task_errors;
 mod pls_std;
 
 use std::time::{Duration, Instant};
-use std::error;
-use std::result;
+use std::{error, result, cmp};
 use rmodbus::server::context::{ModbusContext};
-use task_errors::{TaskTimeOutError, TaskOtherError};
+use task_errors::{TaskTimeOutError};
 use pls_std::bitword::BitWord;
 
 pub trait Program {
@@ -19,6 +18,7 @@ pub struct Task {
     programs: Vec<Box<dyn Program>>,
     priority: u8,
     event: Event,
+    next_program: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -36,7 +36,13 @@ impl Task {
         priority: u8,
         cycle: Duration,
     ) -> Self {
-        Self { name, programs, priority, event: Event::Cycle((cycle, Instant::now())) }
+        Self {
+            name,
+            programs,
+            priority,
+            event: Event::Cycle((cycle, Instant::now())),
+            next_program: 0,
+        }
     }
 
     pub fn new_front_discrete_input(
@@ -45,7 +51,13 @@ impl Task {
         priority: u8,
         bit_addr: u16,
     ) -> Self {
-        Self { name, programs, priority, event: Event::DiscreteInputFront((bit_addr, 4)) }
+        Self {
+            name,
+            programs,
+            priority,
+            event: Event::DiscreteInputFront((bit_addr, 4)),
+            next_program: 0,
+        }
     }
 
     pub fn new_background(
@@ -53,7 +65,13 @@ impl Task {
         programs: Vec<Box<dyn Program>>,
         priority: u8,
     ) -> Self {
-        Self { name, programs, priority, event: Event::Background }
+        Self {
+            name,
+            programs,
+            priority,
+            event: Event::Background,
+            next_program: 0,
+        }
     }
 
     pub fn get_priority(&self) -> u8 { self.priority }
@@ -67,26 +85,21 @@ impl Task {
     pub fn run(
         &mut self,
         context: &mut ModbusContext,
-        task_num: usize,
-    ) -> result::Result<usize, Box<dyn error::Error>> {
+    ) -> result::Result<u8, Box<dyn error::Error>> {
 
-        if task_num > (self.programs.len() - 1) {
-            let e = TaskOtherError::new("Task::run(), task_num > self.programs.len()");
-            return Err(Box::new(e));
-        }
-
-        if task_num == 0 {
+        if self.next_program == 0 {
             self.after_start();
         }
 
-        self.programs[task_num].run(context)?;
+        self.programs[self.next_program as usize].run(context)?;
 
-        if task_num == (self.programs.len() - 1) {
+        self.next_program = (self.next_program + 1) % self.programs.len() as u8;
+
+        if self.next_program == 0 {
             self.before_complit()?;
-            return Ok(0);
         }
 
-        Ok(task_num + 1)
+        Ok(self.next_program)
     }
 
     pub fn need_run(&mut self, context: &ModbusContext) -> result::Result<bool, Box<dyn error::Error>> {
@@ -133,4 +146,32 @@ impl Task {
         }
     }
 
+}
+
+impl cmp::PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_priority() == other.get_priority()
+        && self.get_name() == other.get_name()
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.get_priority() != other.get_priority()
+        || self.get_name() != other.get_name()
+    }
+}
+
+impl cmp::PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        let first = self.get_priority();
+        let second = other.get_priority();
+        second.partial_cmp(&first)
+    }
+}
+
+impl cmp::Eq for Task {}
+
+impl  cmp::Ord for Task {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
