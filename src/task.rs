@@ -4,15 +4,16 @@ mod task_errors;
 mod pls_std;
 
 use std::time::{Duration, Instant};
-use std::{error, result, cmp};
+use std::{error, result, cmp, fmt};
 use rmodbus::server::context::{ModbusContext};
 use task_errors::{TaskTimeOutError};
 use pls_std::bitword::BitWord;
 
-pub trait Program {
+pub trait Program: fmt::Debug {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
 }
 
+#[derive(Debug)]
 pub struct Task {
     name: &'static str,
     programs: Vec<Box<dyn Program>>,
@@ -21,11 +22,48 @@ pub struct Task {
     next_program: u8,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Event {
     Cycle((Duration, Instant)),
     Background,
     DiscreteInputFront((u16, u8)),
+}
+
+impl cmp::PartialEq for Event {
+    fn eq(&self, other: &Self) -> bool {
+        let first = match self {
+            Self::Background => 0,
+            _ => 1,
+        };
+
+        let second = match other {
+            Self::Background => 0,
+            _ => 1,
+        };
+
+        first == second
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
+impl cmp::PartialOrd for Event {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        let first = match self {
+            Self::Background => 0,
+            _ => 1,
+        };
+
+        let second = match other {
+            Self::Background => 0,
+            _ => 1,
+        };
+
+        first.partial_cmp(&second)
+
+    }
 }
 
 impl Task {
@@ -151,20 +189,32 @@ impl Task {
 impl cmp::PartialEq for Task {
     fn eq(&self, other: &Self) -> bool {
         self.get_priority() == other.get_priority()
-        && self.get_name() == other.get_name()
+        && self.get_event() == other.get_event()
     }
 
     fn ne(&self, other: &Self) -> bool {
-        self.get_priority() != other.get_priority()
-        || self.get_name() != other.get_name()
+        !self.eq(other)
     }
 }
 
 impl cmp::PartialOrd for Task {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        let first = self.get_priority();
-        let second = other.get_priority();
-        second.partial_cmp(&first)
+
+        let event_comparete = self.get_event()
+            .partial_cmp(&other.get_event());
+            
+        if let Some(i) = event_comparete {
+            return match i {
+                cmp::Ordering::Equal => {
+                    let first = self.get_priority();
+                    let second = other.get_priority();
+                    second.partial_cmp(&first)
+                },
+                _ => Some(i),    
+            };
+        }
+
+        event_comparete
     }
 }
 
@@ -174,4 +224,46 @@ impl  cmp::Ord for Task {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.partial_cmp(other).unwrap()
     }
+}
+
+
+#[test]
+fn test_task_sort() {
+    
+    let mut result = vec![
+        Task::new_background("", vec![], 5),
+        Task::new_background("", vec![], 9),
+        Task::new_background("", vec![], 2),
+        Task::new_background("", vec![], 4),
+        Task::new_cycle("", vec![], 4, Duration::ZERO),
+        Task::new_cycle("", vec![], 7, Duration::ZERO),
+        Task::new_cycle("", vec![], 1, Duration::ZERO),
+        Task::new_cycle("", vec![], 9, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 3, 1),
+        Task::new_front_discrete_input("", vec![], 8, 1),
+        Task::new_front_discrete_input("", vec![], 4, 1),
+        Task::new_front_discrete_input("", vec![], 5, 1),
+        Task::new_front_discrete_input("", vec![], 1, 1),
+    ];
+
+    let expect = vec![
+        Task::new_background("", vec![], 9),
+        Task::new_background("", vec![], 5),
+        Task::new_background("", vec![], 4),
+        Task::new_background("", vec![], 2),
+        Task::new_cycle("", vec![], 9, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 8, 1),
+        Task::new_cycle("", vec![], 7, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 5, 1),
+        Task::new_cycle("", vec![], 4, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 4, 1),
+        Task::new_front_discrete_input("", vec![], 3, 1),
+        Task::new_cycle("", vec![], 1, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 1, 1),
+    ];
+
+    result.sort();
+
+    assert_eq!(result, expect);
+    
 }

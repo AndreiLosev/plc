@@ -76,7 +76,39 @@ impl BitWord for usize {}
 impl BitWord for isize {}
 
 #[test]
-fn test_bitword() {
+fn test_get_bit() {
 
-    assert!(false);
+    let mut result: Vec<bool> = Vec::new();
+
+    for i in 0..16 {
+        result.push(34567.get_bit(i).unwrap())
+    }
+
+    let expect = vec![
+        true, true, true, false,
+        false, false, false, false,
+        true, true, true, false,
+        false, false, false, true,
+    ];
+
+    assert_eq!(result, expect);
+}
+
+#[test]
+fn test_set_bit() {
+
+    let mut result = 76543;
+
+    for (i, &bit) in (vec![
+        true, true, true, false,
+        false, false, false, false,
+        true, true, true, false,
+        false, false, false, true,
+    ]).iter().enumerate() {
+        result.set_bit(i as u8, bit).unwrap();
+    }
+
+    let expect = 100103;
+
+    assert_eq!(result, expect);
 }

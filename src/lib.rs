@@ -43,24 +43,53 @@ impl Plc {
 
     pub fn run(&mut self) {    
         loop {
-            for i in 0..self.task_event.len() {
+            match self.set_call_stack() {
+                Err(e) => println!("err : {}", e),
+                _ => (),
+            };
 
-                let need_run = self.task_event[i].need_run(&self.context).unwrap();
-                let task_ref = &self.task_event[i];
+            let result = match self.call_stack.last_mut() {
+                Some(task) => match task.run(&mut self.context) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        println!("err: {}", e);
+                        0
+                    }
+                },
+                None => continue,
+            };
 
-                if need_run && !self.call_stack.contains(task_ref) {
-                    self.call_stack.push(self.task_event.remove(i));
+            if result == 0 {
+                let task = self.call_stack.remove(self.call_stack.len() - 1);
+                match task.get_event() {
+                    task::Event::Background => self.bacground.push(task),
+                    _ => self.task_event.push(task)
                 }
             }
 
-            if self.call_stack.is_empty() {
-                if let Some(_) = self.bacground.get(0) {
-                    self.call_stack.push(self.bacground.remove(0));   
-                }
-            }
-
-            self.call_stack.sort_unstable();
         }
+    }
+
+    fn set_call_stack(&mut self) -> result::Result<(), Box<dyn error::Error>> {
+        for i in 0..self.task_event.len() {
+
+            let need_run = self.task_event[i].need_run(&self.context)?;
+
+            if need_run {
+                self.call_stack.push(self.task_event.swap_remove(i));
+            }
+        }
+
+        if self.call_stack.is_empty() {
+            let n = self.bacground.len();
+            if let Some(_) = self.bacground.get(n) {
+                self.call_stack.push(self.bacground.remove(n));   
+            }
+        }
+
+        self.call_stack.sort_unstable();
+
+        Ok(())
     }
 
     fn read_config() -> config::General {
