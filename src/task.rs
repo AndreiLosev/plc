@@ -32,32 +32,28 @@ pub enum Event {
 impl cmp::PartialEq for Event {
     fn eq(&self, other: &Self) -> bool {
         let first = match self {
-            Self::Background => 0,
+            Self::Background => 2,
             _ => 1,
         };
 
         let second = match other {
-            Self::Background => 0,
+            Self::Background => 2,
             _ => 1,
         };
 
         first == second
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
     }
 }
 
 impl cmp::PartialOrd for Event {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         let first = match self {
-            Self::Background => 0,
+            Self::Background => 2,
             _ => 1,
         };
 
         let second = match other {
-            Self::Background => 0,
+            Self::Background => 2,
             _ => 1,
         };
 
@@ -191,10 +187,6 @@ impl cmp::PartialEq for Task {
         self.get_priority() == other.get_priority()
         && self.get_event() == other.get_event()
     }
-
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
-    }
 }
 
 impl cmp::PartialOrd for Task {
@@ -208,7 +200,7 @@ impl cmp::PartialOrd for Task {
                 cmp::Ordering::Equal => {
                     let first = self.get_priority();
                     let second = other.get_priority();
-                    second.partial_cmp(&first)
+                    first.partial_cmp(&second)
                 },
                 _ => Some(i),    
             };
@@ -247,19 +239,19 @@ fn test_task_sort() {
     ];
 
     let expect = vec![
-        Task::new_background("", vec![], 9),
-        Task::new_background("", vec![], 5),
-        Task::new_background("", vec![], 4),
-        Task::new_background("", vec![], 2),
-        Task::new_cycle("", vec![], 9, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 8, 1),
-        Task::new_cycle("", vec![], 7, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 5, 1),
-        Task::new_cycle("", vec![], 4, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 4, 1),
-        Task::new_front_discrete_input("", vec![], 3, 1),
-        Task::new_cycle("", vec![], 1, Duration::ZERO),
         Task::new_front_discrete_input("", vec![], 1, 1),
+        Task::new_cycle("", vec![], 1, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 3, 1),
+        Task::new_front_discrete_input("", vec![], 4, 1),
+        Task::new_cycle("", vec![], 4, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 5, 1),
+        Task::new_cycle("", vec![], 7, Duration::ZERO),
+        Task::new_front_discrete_input("", vec![], 8, 1),
+        Task::new_cycle("", vec![], 9, Duration::ZERO),
+        Task::new_background("", vec![], 2),
+        Task::new_background("", vec![], 4),
+        Task::new_background("", vec![], 5),
+        Task::new_background("", vec![], 9),
     ];
 
     result.sort();

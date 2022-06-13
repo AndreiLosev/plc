@@ -6,23 +6,18 @@ use rmodbus::server::context::ModbusContext;
 use ansi_term::Color::Red;
 use std::{env, fs, result, error};
 
-struct TaskLink {
-    task_priority: u8,
-    task_position: u8,
-}
-
 pub struct Plc {
     task_event: Vec<task::Task>,
     bacground: Vec<task::Task>,
     context: ModbusContext,
-    config: Config,
+    _config: Config,
     call_stack: Vec<task::Task>
 }
 
 impl Plc {
     pub fn new(tasks: Vec<task::Task>) -> Self {
 
-        let config = Self::config_adapter(Self::read_config()); 
+        let _config = Self::config_adapter(Self::read_config()); 
         let context = ModbusContext::new();
 
         let mut task_event: Vec<task::Task> = Vec::new();
@@ -38,34 +33,29 @@ impl Plc {
 
         bacground.sort_unstable();
 
-        Self { task_event, bacground, context, config, call_stack: Vec::new() }
+        Self { task_event, bacground, context, _config, call_stack: Vec::new() }
     }
 
     pub fn run(&mut self) {    
         loop {
-            match self.set_call_stack() {
-                Err(e) => println!("err : {}", e),
-                _ => (),
-            };
 
-            let result = match self.call_stack.last_mut() {
-                Some(task) => match task.run(&mut self.context) {
-                    Ok(n) => n,
-                    Err(e) => {
-                        println!("err: {}", e);
-                        0
-                    }
-                },
-                None => continue,
-            };
-
-            if result == 0 {
-                let task = self.call_stack.remove(self.call_stack.len() - 1);
-                match task.get_event() {
-                    task::Event::Background => self.bacground.push(task),
-                    _ => self.task_event.push(task)
-                }
+            if let Err(e) = self.set_call_stack() {
+                println!("err : {}", e)
             }
+
+            let result = match self.call_task() {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("err: {}", e);
+                    0
+                }
+            };
+
+            if result != 0 {
+                continue;
+            }
+
+            self.return_task();
 
         }
     }
@@ -80,16 +70,35 @@ impl Plc {
             }
         }
 
-        if self.call_stack.is_empty() {
-            let n = self.bacground.len();
-            if let Some(_) = self.bacground.get(n) {
-                self.call_stack.push(self.bacground.remove(n));   
-            }
+        if self.call_stack.is_empty() && self.bacground.get(0).is_some() {
+            self.call_stack.push(self.bacground.remove(0));
         }
 
         self.call_stack.sort_unstable();
 
         Ok(())
+    }
+
+    fn call_task(&mut self) -> result::Result<u8, Box<dyn error::Error>> {
+        let result = match self.call_stack.first_mut() {
+            Some(task) => task.run(&mut self.context)?,
+            None => u8::MAX,
+        };
+
+        Ok(result)
+    }
+
+    fn return_task(&mut self) {
+        if self.call_stack.get(0).is_none() {
+            return;
+        }
+
+        let task = self.call_stack.remove(0);
+        match task.get_event() {
+            task::Event::Background => self.bacground.push(task),
+            _ => self.task_event.push(task)
+        }
+
     }
 
     fn read_config() -> config::General {
@@ -98,15 +107,23 @@ impl Plc {
         work_dir.push("gпeneral.yaml");
         
         let config_as_string = fs::read_to_string(work_dir)
-            .expect(&Red.paint("general config file not found in ${workingdirectory}/config/general.yaml").to_string());
+            .unwrap_or_else(|e| panic!(
+                "err: {}, doc: {}",
+                &Red.paint(format!("{}", e)),
+                &Red.paint("general config file not found in ${workingdirectory}/config/general.yaml"),
+            ));
         
         let config: config::General = serde_yaml::from_str(&config_as_string)
-            .expect(&Red.paint("general config file ${workingdirectory}/config/general.yaml not valid yaml").to_string());
+            .unwrap_or_else(|e| panic!(
+                "err: {}, doc: {}",
+                &Red.paint("general config file ${workingdirectory}/config/general.yaml not valid yaml"),
+                &Red.paint(format!("{}", e))
+            ));
         
         config
     }
 
-    fn config_adapter(yaml_config: config::General) -> Config {
+    fn config_adapter(_yaml_config: config::General) -> Config {
         Config {}
     }
 }
