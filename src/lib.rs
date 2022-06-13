@@ -2,7 +2,7 @@ pub mod task;
 pub mod pls_std;
 mod config;
 
-use rmodbus::server::context::ModbusContext;
+pub use rmodbus::server::context::ModbusContext as ModbusContext;
 use ansi_term::Color::Red;
 use std::{env, fs, result, error};
 
@@ -26,7 +26,7 @@ impl Plc {
         for task in tasks {
             match task.get_event() {
                 task::Event::Cycle(_) => task_event.push(task),
-                task::Event::DiscreteInputFront(_) => task_event.push(task),
+                task::Event::BitFront(_) => task_event.push(task),
                 task::Event::Background => bacground.push(task),
             }
         }
@@ -102,25 +102,25 @@ impl Plc {
     }
 
     fn read_config() -> config::General {
-        let mut work_dir = env::current_dir().unwrap();
-        work_dir.push("config");
-        work_dir.push("gпeneral.yaml");
+        // let mut work_dir = env::current_dir().unwrap();
+        // work_dir.push("config");
+        // work_dir.push("gпeneral.yaml");
+        // dbg!(&work_dir);
+        // let config_as_string = fs::read_to_string(work_dir)
+        //     .unwrap_or_else(|e| panic!(
+        //         "err: {}, doc: {}",
+        //         &Red.paint(format!("{}", e)),
+        //         &Red.paint("general config file not found in ${workingdirectory}/config/general.yaml"),
+        //     ));
         
-        let config_as_string = fs::read_to_string(work_dir)
-            .unwrap_or_else(|e| panic!(
-                "err: {}, doc: {}",
-                &Red.paint(format!("{}", e)),
-                &Red.paint("general config file not found in ${workingdirectory}/config/general.yaml"),
-            ));
+        // let config: config::General = serde_yaml::from_str(&config_as_string)
+        //     .unwrap_or_else(|e| panic!(
+        //         "err: {}, doc: {}",
+        //         &Red.paint("general config file ${workingdirectory}/config/general.yaml not valid yaml"),
+        //         &Red.paint(format!("{}", e))
+        //     ));
         
-        let config: config::General = serde_yaml::from_str(&config_as_string)
-            .unwrap_or_else(|e| panic!(
-                "err: {}, doc: {}",
-                &Red.paint("general config file ${workingdirectory}/config/general.yaml not valid yaml"),
-                &Red.paint(format!("{}", e))
-            ));
-        
-        config
+        config::General{}
     }
 
     fn config_adapter(_yaml_config: config::General) -> Config {

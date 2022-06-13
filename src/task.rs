@@ -4,16 +4,16 @@ mod task_errors;
 mod pls_std;
 
 use std::time::{Duration, Instant};
-use std::{error, result, cmp, fmt};
+use std::{error, result, cmp};
 use rmodbus::server::context::{ModbusContext};
 use task_errors::{TaskTimeOutError};
 use pls_std::bitword::BitWord;
 
-pub trait Program: fmt::Debug {
+pub trait Program {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
 }
 
-#[derive(Debug)]
+
 pub struct Task {
     name: &'static str,
     programs: Vec<Box<dyn Program>>,
@@ -26,7 +26,7 @@ pub struct Task {
 pub enum Event {
     Cycle((Duration, Instant)),
     Background,
-    DiscreteInputFront((u16, u8)),
+    BitFront((u16, u8)),
 }
 
 impl cmp::PartialEq for Event {
@@ -79,7 +79,7 @@ impl Task {
         }
     }
 
-    pub fn new_front_discrete_input(
+    pub fn new_input_bit(
         name: &'static str,
         programs: Vec<Box<dyn Program>>,
         priority: u8,
@@ -89,7 +89,22 @@ impl Task {
             name,
             programs,
             priority,
-            event: Event::DiscreteInputFront((bit_addr, 4)),
+            event: Event::BitFront((bit_addr, 4)),
+            next_program: 0,
+        }
+    }
+
+    pub fn new_coli_bit(
+        name: &'static str,
+        programs: Vec<Box<dyn Program>>,
+        priority: u8,
+        bit_addr: u16,
+    ) -> Self {
+        Self {
+            name,
+            programs,
+            priority,
+            event: Event::BitFront((bit_addr, 132)),
             next_program: 0,
         }
     }
@@ -139,9 +154,13 @@ impl Task {
     pub fn need_run(&mut self, context: &ModbusContext) -> result::Result<bool, Box<dyn error::Error>> {
         match &mut self.event {
             Event::Cycle((t, i)) => Ok(*t <= i.elapsed()),
-            Event::DiscreteInputFront((addr, b)) => {
+            Event::BitFront((addr, b)) => {
                 let first = b.get_bit(0)?;
-                let bit = context.get_discrete(*addr)?;
+
+                let bit = match b.get_bit(7).unwrap() {
+                    true => context.get_coil(*addr)?,
+                    false => context.get_discrete(*addr)?,
+                };
 
                 b.set_bit(1, first)?;
                 b.set_bit(0, bit)?;
@@ -159,14 +178,14 @@ impl Task {
     fn after_start(&mut self) {
         match &mut self.event {
             Event::Cycle((_, i)) => { *i = Instant::now(); },
-            Event::DiscreteInputFront((_, b)) => { b.set_bit(2, false).unwrap(); },
+            Event::BitFront((_, b)) => { b.set_bit(2, false).unwrap(); },
             Event::Background => (),
         }
     }
 
     fn before_complit(&mut self) -> result::Result<(), Box<dyn error::Error>> {
         match &mut self.event {
-            Event::DiscreteInputFront((_, b)) => {
+            Event::BitFront((_, b)) => {
                 b.set_bit(2, true).unwrap();
                 Ok(())
             },
@@ -223,39 +242,42 @@ impl  cmp::Ord for Task {
 fn test_task_sort() {
     
     let mut result = vec![
-        Task::new_background("", vec![], 5),
-        Task::new_background("", vec![], 9),
-        Task::new_background("", vec![], 2),
-        Task::new_background("", vec![], 4),
-        Task::new_cycle("", vec![], 4, Duration::ZERO),
-        Task::new_cycle("", vec![], 7, Duration::ZERO),
-        Task::new_cycle("", vec![], 1, Duration::ZERO),
-        Task::new_cycle("", vec![], 9, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 3, 1),
-        Task::new_front_discrete_input("", vec![], 8, 1),
-        Task::new_front_discrete_input("", vec![], 4, 1),
-        Task::new_front_discrete_input("", vec![], 5, 1),
-        Task::new_front_discrete_input("", vec![], 1, 1),
+        Task::new_background("new_background: 5", vec![], 5),
+        Task::new_background("new_background: 9", vec![], 9),
+        Task::new_background("new_background: 2", vec![], 2),
+        Task::new_background("new_background: 4", vec![], 4),
+        Task::new_cycle("new_cycle: 4", vec![], 4, Duration::ZERO),
+        Task::new_cycle("new_cycle: 7", vec![], 7, Duration::ZERO),
+        Task::new_cycle("new_cycle: 1", vec![], 1, Duration::ZERO),
+        Task::new_cycle("new_cycle: 9", vec![], 9, Duration::ZERO),
+        Task::new_coli_bit("new_coli_bit: 3", vec![], 3, 1),
+        Task::new_input_bit("new_input_bit: 8", vec![], 8, 1),
+        Task::new_input_bit("new_input_bit: 4", vec![], 4, 1),
+        Task::new_coli_bit("new_coli_bit: 5", vec![], 5, 1),
+        Task::new_coli_bit("new_coli_bit: 1", vec![], 1, 1),
     ];
 
     let expect = vec![
-        Task::new_front_discrete_input("", vec![], 1, 1),
-        Task::new_cycle("", vec![], 1, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 3, 1),
-        Task::new_front_discrete_input("", vec![], 4, 1),
-        Task::new_cycle("", vec![], 4, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 5, 1),
-        Task::new_cycle("", vec![], 7, Duration::ZERO),
-        Task::new_front_discrete_input("", vec![], 8, 1),
-        Task::new_cycle("", vec![], 9, Duration::ZERO),
-        Task::new_background("", vec![], 2),
-        Task::new_background("", vec![], 4),
-        Task::new_background("", vec![], 5),
-        Task::new_background("", vec![], 9),
+        Task::new_cycle("new_cycle: 1", vec![], 1, Duration::ZERO),
+        Task::new_coli_bit("new_coli_bit: 1", vec![], 1, 1),
+        Task::new_coli_bit("new_coli_bit: 3", vec![], 3, 1),
+        Task::new_cycle("new_cycle: 4", vec![], 4, Duration::ZERO),
+        Task::new_input_bit("new_input_bit: 4", vec![], 4, 1),
+        Task::new_coli_bit("new_coli_bit: 5", vec![], 5, 1),
+        Task::new_cycle("new_cycle: 7", vec![], 7, Duration::ZERO),
+        Task::new_input_bit("new_input_bit: 8", vec![], 8, 1),
+        Task::new_cycle("new_cycle: 9", vec![], 9, Duration::ZERO),
+        Task::new_background("new_background: 2", vec![], 2),
+        Task::new_background("new_background: 4", vec![], 4),
+        Task::new_background("new_background: 5", vec![], 5),
+        Task::new_background("new_background: 9", vec![], 9),
     ];
 
     result.sort();
 
-    assert_eq!(result, expect);
+    assert_eq!(
+        result.iter().map(|i| i.get_name()).collect::<Vec<_>>(),
+        expect.iter().map(|i| i.get_name()).collect::<Vec<_>>(),
+    );
     
 }
