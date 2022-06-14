@@ -1,13 +1,10 @@
 mod task_errors;
 
-#[path = "pls_std.rs"]
-mod pls_std;
-
 use std::time::{Duration, Instant};
 use std::{error, result, cmp};
 use rmodbus::server::context::{ModbusContext};
 use task_errors::{TaskTimeOutError};
-use pls_std::bitword::BitWord;
+use super::pls_std::bitword::BitWord;
 
 pub trait Program {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;

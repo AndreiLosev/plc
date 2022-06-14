@@ -3,8 +3,8 @@ pub mod pls_std;
 mod config;
 
 pub use rmodbus::server::context::ModbusContext as ModbusContext;
-use ansi_term::Color::Red;
-use std::{env, fs, result, error};
+// use ansi_term::Color::Red;
+use std::{result, error};
 
 pub struct Plc {
     task_event: Vec<task::Task>,
@@ -61,13 +61,20 @@ impl Plc {
     }
 
     fn set_call_stack(&mut self) -> result::Result<(), Box<dyn error::Error>> {
+
+        let mut need_run_index: Vec<usize> = Vec::with_capacity(self.task_event.len());
+
         for i in 0..self.task_event.len() {
 
             let need_run = self.task_event[i].need_run(&self.context)?;
 
             if need_run {
-                self.call_stack.push(self.task_event.swap_remove(i));
+                need_run_index.push(i);
             }
+        }
+
+        for i in need_run_index {
+            self.call_stack.push(self.task_event.swap_remove(i));
         }
 
         if self.call_stack.is_empty() && self.bacground.get(0).is_some() {
