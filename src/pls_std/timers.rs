@@ -1,16 +1,15 @@
 use std::time::{Duration, Instant};
 
-struct Ton;
-struct Tof;
-struct Tp;
+struct Ton(Option<Instant>);
+struct Tof(Option<Instant>);
+struct Tp(Option<Instant>);
 
 pub struct Timer<T> {
     in1: bool,
     pt: Duration,
     q: bool,
     et: Duration,
-    time: Option<Instant>,
-    timerType: T,
+    timer_type: T,
 }
 
 impl<T> Timer<T> {
@@ -29,8 +28,7 @@ impl Timer<Ton> {
             pt,
             q: false,
             et: Duration::ZERO,
-            time: None,
-            timerType: Ton,
+            timer_type: Ton(None),
         }
     }
 
@@ -40,16 +38,20 @@ impl Timer<Ton> {
         self.in1 = in1;
 
         if timer_run {
-            self.time = Some(Instant::now());
+            self.timer_type.0 = Some(Instant::now());
         }
 
-        if let Some(i) = self.time {
+        if let Some(i) = self.timer_type.0 {
 
             self.et = i.elapsed();
 
             if i.elapsed() >= self.pt {
                 self.et = self.pt;
-                self.time = None;
+                self.timer_type.0 = None;
+            }
+
+            if !self.in1 {
+                self.timer_type.0 = None;
             }
         }
 
@@ -60,27 +62,76 @@ impl Timer<Ton> {
 }
 
 impl Timer<Tof> {
-    pub fn new_ton(pt: Duration) -> Self {
+    pub fn new_tof(pt: Duration) -> Self {
         Self {
             in1: false,
             pt,
             q: false,
             et: Duration::ZERO,
-            time: None,
-            timerType: Tof,
+            timer_type: Tof(None),
         }
+    }
+
+    pub fn run(&mut self, in1: bool) {
+
+        let timer_run = !in1 && self.in1;
+        self.in1 = in1;
+
+        if timer_run {
+            self.timer_type.0 = Some(Instant::now());
+        }
+
+        if let Some(i) = self.timer_type.0 {
+
+            self.et = i.elapsed();
+
+            if i.elapsed() >= self.pt {
+                self.et = self.pt;
+                self.timer_type.0 = None;
+            }
+        }
+
+        self.q = self.in1 || self.et < self.pt;
     }
 }
 
 impl Timer<Tp> {
-    pub fn new_ton(pt: Duration) -> Self {
+    pub fn new_tp(pt: Duration) -> Self {
         Self {
             in1: false,
             pt,
             q: false,
             et: Duration::ZERO,
-            time: None,
-            timerType: Tp,
+            timer_type: Tp(None),
         }
     }
+
+    pub fn run(&mut self, in1: bool) {
+
+        let timer_run = in1 && !self.in1;
+        self.in1 = in1;
+
+        if timer_run {
+            self.timer_type.0 = Some(Instant::now());
+        }
+
+        if let Some(i) = self.timer_type.0 {
+
+            self.et = i.elapsed();
+
+            if i.elapsed() >= self.pt {
+                self.et = self.pt;
+                self.timer_type.0 = None;
+            }
+        }
+
+        self.q = self.timer_type.0.is_some();
+
+    }
 }
+
+
+// #[test]
+// fn test_ton() {
+//     let timer = Timer::new_ton(Duration::from_secs(2));
+// }
