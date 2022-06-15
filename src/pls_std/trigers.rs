@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct RTrig {
     clk: bool,
     q: bool,
@@ -13,6 +14,7 @@ impl RTrig {
     }
 }
 
+#[derive(Default)]
 pub struct FTrig {
     clk: bool,
     q: bool,
@@ -27,7 +29,7 @@ impl FTrig {
         self.clk = clk;
     }
 }
-
+#[derive(Default)]
 pub struct Rs {
     set: bool,
     reset: bool,
@@ -44,7 +46,6 @@ impl  Rs {
         self.reset = reset;
     }
 }
-
 
 #[test]
 fn test_r_trig() {
