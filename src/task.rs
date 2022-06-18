@@ -11,9 +11,9 @@ pub trait Program {
 }
 
 
-pub struct Task {
+pub struct Task<'a> {
     name: &'static str,
-    programs: Vec<&'static mut dyn Program>,
+    programs: Vec<&'a mut dyn Program>,
     priority: u8,
     event: Event,
     next_program: u8,
@@ -59,11 +59,11 @@ impl cmp::PartialOrd for Event {
     }
 }
 
-impl Task {
+impl<'a> Task<'a> {
 
     pub fn new_cycle(
         name: &'static str,
-        programs: Vec<&'static mut dyn Program>,
+        programs: Vec<&'a mut dyn Program>,
         priority: u8,
         cycle: Duration,
     ) -> Self {
@@ -78,7 +78,7 @@ impl Task {
 
     pub fn new_input_bit(
         name: &'static str,
-        programs: Vec<&'static mut dyn Program>,
+        programs: Vec<&'a mut dyn Program>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
@@ -93,7 +93,7 @@ impl Task {
 
     pub fn new_coli_bit(
         name: &'static str,
-        programs: Vec<&'static mut dyn Program>,
+        programs: Vec<&'a mut dyn Program>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
@@ -108,7 +108,7 @@ impl Task {
 
     pub fn new_background(
         name: &'static str,
-        programs: Vec<&'static mut dyn Program>,
+        programs: Vec<&'a mut dyn Program>,
         priority: u8,
     ) -> Self {
         Self {
@@ -198,14 +198,14 @@ impl Task {
 
 }
 
-impl cmp::PartialEq for Task {
+impl<'a> cmp::PartialEq for Task<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.get_priority() == other.get_priority()
         && self.get_event() == other.get_event()
     }
 }
 
-impl cmp::PartialOrd for Task {
+impl<'a> cmp::PartialOrd for Task<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
 
         let event_comparete = self.get_event()
@@ -226,9 +226,9 @@ impl cmp::PartialOrd for Task {
     }
 }
 
-impl cmp::Eq for Task {}
+impl<'a> cmp::Eq for Task<'a> {}
 
-impl<'a>  cmp::Ord for Task {
+impl<'a>  cmp::Ord for Task<'a> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.partial_cmp(other).unwrap()
     }

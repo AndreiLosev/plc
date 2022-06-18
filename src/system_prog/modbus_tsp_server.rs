@@ -8,13 +8,21 @@ use rmodbus::ModbusFrameBuf;
 use std::{result, error};
 use ansi_term::Color::Red;
 
-pub struct ModbusTcpServer<'a> {
+pub struct ModbusTcpServer {
     id: u8,
-    listener: &'a TcpListener,
+    listener: TcpListener,
 }
 
-impl<'a> ModbusTcpServer<'a> {
-    pub fn create_listener(listen: &'static str) -> TcpListener {
+impl ModbusTcpServer {
+
+    pub fn new(id: u8, listen: &'static str) -> Self {
+
+        let listener = Self::create_listener(listen);
+
+        Self { id, listener}
+    }
+
+    fn create_listener(listen: &'static str) -> TcpListener {
         let listener = TcpListener::bind(listen)
         .unwrap_or_else(|e| panic!(
             "err: {}",
@@ -28,14 +36,10 @@ impl<'a> ModbusTcpServer<'a> {
 
         listener
     }
-
-    pub fn new(id: u8, listener: &'a TcpListener) -> Self {
-        Self { id, listener}
-    }
 }
 
 
-impl<'a> Program for ModbusTcpServer<'static> {
+impl<'a> Program for ModbusTcpServer {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
         
         let mut stream = match self.listener.accept() {

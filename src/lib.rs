@@ -10,16 +10,16 @@ pub use rmodbus::server::context::ModbusContext;
 // use ansi_term::Color::Red;
 use std::{result, error};
 
-pub struct Plc {
-    task_event: Vec<task::Task>,
-    bacground: Vec<task::Task>,
+pub struct Plc<'a> {
+    task_event: Vec<task::Task<'a>>,
+    bacground: Vec<task::Task<'a>>,
     context: ModbusContext,
     _config: Config,
-    call_stack: Vec<task::Task>,
+    call_stack: Vec<task::Task<'a>>,
 }
 
-impl Plc {
-    pub fn new(tasks: Vec<task::Task>) -> Self {
+impl<'a> Plc<'a> {
+    pub fn new(tasks: Vec<task::Task<'a>>) -> Self {
 
         let _config = Self::config_adapter(Self::read_config()); 
         let context = ModbusContext::new();
