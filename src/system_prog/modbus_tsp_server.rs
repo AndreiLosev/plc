@@ -1,11 +1,11 @@
-use std::io::{Read, Write, self};
+use std::io::{Read, Write};
 use std::net::{TcpListener};
 use super::super::task::Program;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::server::ModbusFrame;
 use rmodbus::ModbusProto;
 use rmodbus::ModbusFrameBuf;
-use std::{result, error};
+use std::{result, error, io};
 use ansi_term::Color::Red;
 
 pub struct ModbusTcpServer {
