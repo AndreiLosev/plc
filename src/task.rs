@@ -10,10 +10,14 @@ pub trait Program {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
 }
 
+pub trait ConstProgram {
+    fn run(self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
+}
 
 pub struct Task<'a> {
     name: &'static str,
     programs: Vec<&'a mut dyn Program>,
+    const_program: Vec<&'a dyn ConstProgram>,
     priority: u8,
     event: Event,
     next_program: u8,
@@ -64,12 +68,14 @@ impl<'a> Task<'a> {
     pub fn new_cycle(
         name: &'static str,
         programs: Vec<&'a mut dyn Program>,
+        const_program: Vec<&'a dyn ConstProgram>,
         priority: u8,
         cycle: Duration,
     ) -> Self {
         Self {
             name,
             programs,
+            const_program,
             priority,
             event: Event::Cycle((cycle, Instant::now())),
             next_program: 0,
@@ -79,12 +85,14 @@ impl<'a> Task<'a> {
     pub fn new_input_bit(
         name: &'static str,
         programs: Vec<&'a mut dyn Program>,
+        const_program: Vec<&'a dyn ConstProgram>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
         Self {
             name,
             programs,
+            const_program,
             priority,
             event: Event::BitFront((bit_addr, 4)),
             next_program: 0,
@@ -94,12 +102,14 @@ impl<'a> Task<'a> {
     pub fn new_coli_bit(
         name: &'static str,
         programs: Vec<&'a mut dyn Program>,
+        const_program: Vec<&'a dyn ConstProgram>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
         Self {
             name,
             programs,
+            const_program,
             priority,
             event: Event::BitFront((bit_addr, 132)),
             next_program: 0,
@@ -109,11 +119,13 @@ impl<'a> Task<'a> {
     pub fn new_background(
         name: &'static str,
         programs: Vec<&'a mut dyn Program>,
+        const_program: Vec<&'a dyn ConstProgram>,
         priority: u8,
     ) -> Self {
         Self {
             name,
             programs,
+            const_program,
             priority,
             event: Event::Background,
             next_program: 0,
@@ -239,35 +251,35 @@ impl<'a>  cmp::Ord for Task<'a> {
 fn test_task_sort() {
     
     let mut result = vec![
-        Task::new_background("new_background: 5", vec![], 5),
-        Task::new_background("new_background: 9", vec![], 9),
-        Task::new_background("new_background: 2", vec![], 2),
-        Task::new_background("new_background: 4", vec![], 4),
-        Task::new_cycle("new_cycle: 4", vec![], 4, Duration::ZERO),
-        Task::new_cycle("new_cycle: 7", vec![], 7, Duration::ZERO),
-        Task::new_cycle("new_cycle: 1", vec![], 1, Duration::ZERO),
-        Task::new_cycle("new_cycle: 9", vec![], 9, Duration::ZERO),
-        Task::new_coli_bit("new_coli_bit: 3", vec![], 3, 1),
-        Task::new_input_bit("new_input_bit: 8", vec![], 8, 1),
-        Task::new_input_bit("new_input_bit: 4", vec![], 4, 1),
-        Task::new_coli_bit("new_coli_bit: 5", vec![], 5, 1),
-        Task::new_coli_bit("new_coli_bit: 1", vec![], 1, 1),
+        Task::new_background("new_background: 5", vec![], vec![], 5),
+        Task::new_background("new_background: 9", vec![], vec![], 9),
+        Task::new_background("new_background: 2", vec![], vec![], 2),
+        Task::new_background("new_background: 4", vec![], vec![], 4),
+        Task::new_cycle("new_cycle: 4", vec![], vec![], 4, Duration::ZERO),
+        Task::new_cycle("new_cycle: 7", vec![], vec![], 7, Duration::ZERO),
+        Task::new_cycle("new_cycle: 1", vec![], vec![], 1, Duration::ZERO),
+        Task::new_cycle("new_cycle: 9", vec![], vec![], 9, Duration::ZERO),
+        Task::new_coli_bit("new_coli_bit: 3", vec![], vec![], 3, 1),
+        Task::new_input_bit("new_input_bit: 8", vec![], vec![], 8, 1),
+        Task::new_input_bit("new_input_bit: 4", vec![], vec![], 4, 1),
+        Task::new_coli_bit("new_coli_bit: 5", vec![], vec![], 5, 1),
+        Task::new_coli_bit("new_coli_bit: 1", vec![], vec![], 1, 1),
     ];
 
     let expect = vec![
-        Task::new_cycle("new_cycle: 1", vec![], 1, Duration::ZERO),
-        Task::new_coli_bit("new_coli_bit: 1", vec![], 1, 1),
-        Task::new_coli_bit("new_coli_bit: 3", vec![], 3, 1),
-        Task::new_cycle("new_cycle: 4", vec![], 4, Duration::ZERO),
-        Task::new_input_bit("new_input_bit: 4", vec![], 4, 1),
-        Task::new_coli_bit("new_coli_bit: 5", vec![], 5, 1),
-        Task::new_cycle("new_cycle: 7", vec![], 7, Duration::ZERO),
-        Task::new_input_bit("new_input_bit: 8", vec![], 8, 1),
-        Task::new_cycle("new_cycle: 9", vec![], 9, Duration::ZERO),
-        Task::new_background("new_background: 2", vec![], 2),
-        Task::new_background("new_background: 4", vec![], 4),
-        Task::new_background("new_background: 5", vec![], 5),
-        Task::new_background("new_background: 9", vec![], 9),
+        Task::new_cycle("new_cycle: 1", vec![], vec![], 1, Duration::ZERO),
+        Task::new_coli_bit("new_coli_bit: 1", vec![], vec![], 1, 1),
+        Task::new_coli_bit("new_coli_bit: 3", vec![], vec![], 3, 1),
+        Task::new_cycle("new_cycle: 4", vec![], vec![], 4, Duration::ZERO),
+        Task::new_input_bit("new_input_bit: 4", vec![], vec![], 4, 1),
+        Task::new_coli_bit("new_coli_bit: 5", vec![], vec![], 5, 1),
+        Task::new_cycle("new_cycle: 7", vec![], vec![], 7, Duration::ZERO),
+        Task::new_input_bit("new_input_bit: 8", vec![], vec![], 8, 1),
+        Task::new_cycle("new_cycle: 9", vec![], vec![], 9, Duration::ZERO),
+        Task::new_background("new_background: 2", vec![], vec![], 2),
+        Task::new_background("new_background: 4", vec![], vec![], 4),
+        Task::new_background("new_background: 5", vec![], vec![], 5),
+        Task::new_background("new_background: 9", vec![], vec![], 9),
     ];
 
     result.sort();
