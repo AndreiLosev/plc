@@ -14,7 +14,7 @@ pub struct Plc {
     bacground: Vec<task::Task>,
     context: ModbusContext,
     _config: Config,
-    call_stack: Vec<task::Task>
+    call_stack: Vec<task::Task>,
 }
 
 impl Plc {
