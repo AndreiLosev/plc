@@ -13,7 +13,7 @@ pub trait Program {
 
 pub struct Task {
     name: &'static str,
-    programs: Vec<Box<dyn Program>>,
+    programs: Vec<&'static mut dyn Program>,
     priority: u8,
     event: Event,
     next_program: u8,
@@ -63,7 +63,7 @@ impl Task {
 
     pub fn new_cycle(
         name: &'static str,
-        programs: Vec<Box<dyn Program>>,
+        programs: Vec<&'static mut dyn Program>,
         priority: u8,
         cycle: Duration,
     ) -> Self {
@@ -78,7 +78,7 @@ impl Task {
 
     pub fn new_input_bit(
         name: &'static str,
-        programs: Vec<Box<dyn Program>>,
+        programs: Vec<&'static mut dyn Program>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
@@ -93,7 +93,7 @@ impl Task {
 
     pub fn new_coli_bit(
         name: &'static str,
-        programs: Vec<Box<dyn Program>>,
+        programs: Vec<&'static mut dyn Program>,
         priority: u8,
         bit_addr: u16,
     ) -> Self {
@@ -108,7 +108,7 @@ impl Task {
 
     pub fn new_background(
         name: &'static str,
-        programs: Vec<Box<dyn Program>>,
+        programs: Vec<&'static mut dyn Program>,
         priority: u8,
     ) -> Self {
         Self {
@@ -228,7 +228,7 @@ impl cmp::PartialOrd for Task {
 
 impl cmp::Eq for Task {}
 
-impl  cmp::Ord for Task {
+impl<'a>  cmp::Ord for Task {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.partial_cmp(other).unwrap()
     }

@@ -35,9 +35,9 @@ impl<'a> ModbusTcpServer<'a> {
 }
 
 
-impl<'a> Program for ModbusTcpServer<'a> {
+impl<'a> Program for ModbusTcpServer<'static> {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
-
+        
         let mut stream = match self.listener.accept() {
             Ok((stream, _)) => stream,
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => return Ok(()),

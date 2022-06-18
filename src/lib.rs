@@ -2,10 +2,11 @@ pub mod task;
 pub mod pls_std;
 pub mod system_prog;
 
+
 mod config;
 
-pub use rmodbus as rmodbus;
-use rmodbus::server::context::ModbusContext;
+pub use rmodbus::server::context::ModbusContext;
+
 // use ansi_term::Color::Red;
 use std::{result, error};
 
