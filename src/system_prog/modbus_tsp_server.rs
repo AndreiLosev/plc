@@ -6,7 +6,7 @@ use rmodbus::server::ModbusFrame;
 use rmodbus::ModbusProto;
 use rmodbus::ModbusFrameBuf;
 use std::{result, error, io};
-use ansi_term::Color::Red;
+use super::super::fail_strig;
 
 pub struct ModbusTcpServer {
     id: u8,
@@ -24,15 +24,9 @@ impl ModbusTcpServer {
 
     fn create_listener(listen: &'static str) -> TcpListener {
         let listener = TcpListener::bind(listen)
-        .unwrap_or_else(|e| panic!(
-            "err: {}",
-            &Red.paint(format!("{}", e))
-        ));
+        .unwrap_or_else(|e| panic!("{}", fail_strig(&e)));
         listener.set_nonblocking(true)
-            .unwrap_or_else(|e| panic!(
-                "err: {}",
-                &Red.paint(format!("{}", e))
-            ));
+            .unwrap_or_else(|e| panic!("{}", fail_strig(&e)));
 
         listener
     }

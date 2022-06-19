@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 use std::{result, error, io, time::Duration};
 use std::cell::RefCell;
 
+use super::super::fail_strig;
 use super::super::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::server::ModbusFrame;
@@ -10,7 +11,6 @@ use rmodbus::ModbusFrameBuf;
 use serial::SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
-use ansi_term::Color::Red;
 
 pub struct ModbusRtuServer {
     id: u8,
@@ -28,22 +28,13 @@ impl ModbusRtuServer {
 
     fn create_prot(listen: &'static str, settings: serial::PortSettings) -> serial::SystemPort {
         let mut port = serial::open(listen)
-            .unwrap_or_else(|e| panic!(
-                "err: {}",
-                &Red.paint(format!("{}", e))
-            )); 
+            .unwrap_or_else(|e| panic!("{}", fail_strig(&e))); 
 
         port.configure(&settings)
-            .unwrap_or_else(|e| panic!(
-                "err: {}",
-                &Red.paint(format!("{}", e))
-            )); 
+            .unwrap_or_else(|e| panic!("{}", fail_strig(&e))); 
 
         port.set_timeout(Duration::ZERO)
-            .unwrap_or_else(|e| panic!(
-                "err: {}",
-                &Red.paint(format!("{}", e))
-            )); 
+            .unwrap_or_else(|e| panic!("{}", fail_strig(&e))); 
 
         port
     }

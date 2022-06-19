@@ -7,21 +7,20 @@ mod config;
 
 pub use rmodbus::server::context::ModbusContext;
 
-// use ansi_term::Color::Red;
+use ansi_term::Color::Red;
+use ansi_term::ANSIGenericString;
 use std::{result, error};
 
 pub struct Plc<'a> {
     task_event: Vec<task::Task<'a>>,
     bacground: Vec<task::Task<'a>>,
     context: ModbusContext,
-    _config: Config,
     call_stack: Vec<task::Task<'a>>,
 }
 
 impl<'a> Plc<'a> {
     pub fn new(tasks: Vec<task::Task<'a>>) -> Self {
 
-        let _config = Self::config_adapter(Self::read_config()); 
         let context = ModbusContext::new();
 
         let mut task_event: Vec<task::Task> = Vec::new();
@@ -37,20 +36,24 @@ impl<'a> Plc<'a> {
 
         bacground.sort_unstable();
 
-        Self { task_event, bacground, context, _config, call_stack: Vec::new() }
+        Self { task_event, bacground, context, call_stack: Vec::new() }
     }
 
     pub fn run(&mut self) {    
         loop {
 
             if let Err(e) = self.set_call_stack() {
-                println!("err : {}", e)
+                error_log(e, None);
             }
 
             let result = match self.call_task() {
                 Ok(v) => v,
                 Err(e) => {
-                    println!("err: {}", e);
+                    let task_name = match self.call_stack.first() {
+                        Some(t) => t.get_name(),
+                        None => "empty call stack",
+                    };
+                    error_log(e, Some(task_name));
                     0
                 }
             };
@@ -112,36 +115,15 @@ impl<'a> Plc<'a> {
 
     }
 
-    fn read_config() -> config::General {
-        // let mut work_dir = env::current_dir().unwrap();
-        // work_dir.push("config");
-        // work_dir.push("gпeneral.yaml");
-        // dbg!(&work_dir);
-        // let config_as_string = fs::read_to_string(work_dir)
-        //     .unwrap_or_else(|e| panic!(
-        //         "err: {}, doc: {}",
-        //         &Red.paint(format!("{}", e)),
-        //         &Red.paint("general config file not found in ${workingdirectory}/config/general.yaml"),
-        //     ));
-        
-        // let config: config::General = serde_yaml::from_str(&config_as_string)
-        //     .unwrap_or_else(|e| panic!(
-        //         "err: {}, doc: {}",
-        //         &Red.paint("general config file ${workingdirectory}/config/general.yaml not valid yaml"),
-        //         &Red.paint(format!("{}", e))
-        //     ));
-        
-        config::General{}
-    }
+}
 
-    fn config_adapter(_yaml_config: config::General) -> Config {
-        Config {}
+fn error_log(e:  Box<dyn error::Error>, task: Option<&str>) {
+    match task {
+        Some(t) => println!("{}", Red.paint(format!("task: {}, err: {}", t, e))),
+        None => println!("{}", Red.paint(format!("err: {}", e))),
     }
 }
 
-struct Config {}
-
-#[test]
-fn test_plc() {
-
+fn fail_strig(e: & dyn error::Error) -> ANSIGenericString<str> {
+    Red.paint(format!("err: {}", e))
 }
