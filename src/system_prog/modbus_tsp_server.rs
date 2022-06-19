@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener};
-use super::super::task::Program;
+use super::super::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::server::ModbusFrame;
 use rmodbus::ModbusProto;
@@ -39,8 +39,8 @@ impl ModbusTcpServer {
 }
 
 
-impl<'a> Program for ModbusTcpServer {
-    fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
+impl<'a> ConstProgram for ModbusTcpServer {
+    fn run(&self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
         
         let mut stream = match self.listener.accept() {
             Ok((stream, _)) => stream,
