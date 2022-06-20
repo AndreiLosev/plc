@@ -19,7 +19,7 @@ pub struct Plc<'a> {
 }
 
 impl<'a> Plc<'a> {
-    pub fn new(tasks: Vec<task::Task<'a>>) -> Self {
+    pub fn new<const N: usize>(tasks: [task::Task<'a>; N]) -> Self {
 
         let context = ModbusContext::new();
 
