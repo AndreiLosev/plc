@@ -12,12 +12,12 @@ use serial::SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
 
-pub struct ModbusRtuServer {
+pub struct ModbusRtuSlave {
     id: u8,
     port: RefCell<serial::SystemPort>,
 }
 
-impl ModbusRtuServer {
+impl ModbusRtuSlave {
 
     pub fn new(id: u8, listen: &'static str, settings: serial::PortSettings) -> Self {
 
@@ -41,7 +41,7 @@ impl ModbusRtuServer {
 }
 
 
-impl<'a> ConstProgram for ModbusRtuServer {
+impl<'a> ConstProgram for ModbusRtuSlave {
     fn run(&self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
         
         loop {

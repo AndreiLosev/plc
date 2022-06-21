@@ -8,12 +8,12 @@ use rmodbus::ModbusFrameBuf;
 use std::{result, error, io};
 use super::super::fail_strig;
 
-pub struct ModbusTcpServer {
+pub struct ModbusTcpSlave {
     id: u8,
     listener: TcpListener,
 }
 
-impl ModbusTcpServer {
+impl ModbusTcpSlave {
 
     pub fn new(id: u8, listen: &'static str) -> Self {
 
@@ -33,7 +33,7 @@ impl ModbusTcpServer {
 }
 
 
-impl<'a> ConstProgram for ModbusTcpServer {
+impl<'a> ConstProgram for ModbusTcpSlave {
     fn run(&self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
         
         let mut stream = match self.listener.accept() {
