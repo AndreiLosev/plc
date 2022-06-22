@@ -1,13 +1,12 @@
-use std::io::{Read, Write};
-use std::net::{TcpListener};
+use std::io::Read;
+use std::net::TcpListener;
 use super::super::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
-use rmodbus::server::ModbusFrame;
 use rmodbus::ModbusProto;
 use rmodbus::ModbusFrameBuf;
 use std::{result, error, io};
 use super::super::fail_strig;
-
+use super::modbus_slave::modbus_slave;
 pub struct ModbusTcpSlave {
     id: u8,
     listener: TcpListener,
@@ -45,23 +44,14 @@ impl<'a> ConstProgram for ModbusTcpSlave {
         loop {
          
             let mut buf: ModbusFrameBuf = [0; 256];
-            let mut response: Vec<u8> = Vec::with_capacity(8);
             stream.read(&mut buf)?;
-            let mut frame = ModbusFrame::new(self.id, &buf, ModbusProto::TcpUdp, &mut response);
-            frame.parse()?;
-    
-            if frame.processing_required {
-                match frame.readonly {
-                    true => frame.process_read(context),
-                    false => frame.process_write(context),
-                }?;
-            }
-    
-            if frame.response_required {
-                frame.finalize_response()?;
-                stream.write(response.as_slice())?;
-                break Ok(());
-            }          
+            
+            let end = modbus_slave(&mut stream, context, ModbusProto::TcpUdp, self.id)?;
+
+            match end {
+                true => break Ok(()),
+                false => (),
+            }        
         }      
     }
 }
