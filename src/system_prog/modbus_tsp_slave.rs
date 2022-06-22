@@ -1,9 +1,7 @@
-use std::io::Read;
 use std::net::TcpListener;
 use super::super::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::ModbusProto;
-use rmodbus::ModbusFrameBuf;
 use std::{result, error, io};
 use super::super::fail_strig;
 use super::modbus_slave::modbus_slave;
@@ -42,10 +40,7 @@ impl<'a> ConstProgram for ModbusTcpSlave {
         };
 
         loop {
-         
-            let mut buf: ModbusFrameBuf = [0; 256];
-            stream.read(&mut buf)?;
-            
+
             let end = modbus_slave(&mut stream, context, ModbusProto::TcpUdp, self.id)?;
 
             match end {

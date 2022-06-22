@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::{result, error, io, time::Duration};
 use std::cell::RefCell;
 
@@ -6,7 +5,6 @@ use super::super::fail_strig;
 use super::super::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::ModbusProto;
-use rmodbus::ModbusFrameBuf;
 use serial::SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
