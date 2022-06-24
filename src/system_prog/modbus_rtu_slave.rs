@@ -8,7 +8,8 @@ use rmodbus::ModbusProto;
 use serial::SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
-use super::modbus_slave::{modbus_slave, ModbusErr};
+use super::modbus_slave::modbus_slave;
+use super::modbus_error::ModbusErr;
 
 pub struct ModbusRtuSlave {
     id: u8,
