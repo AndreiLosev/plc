@@ -64,7 +64,7 @@ impl ModbusMaster {
     ) -> result::Result<Vec<u16>, ModbusErr> {
 
         let mut mreq = ModbusRequest::new(self.id, self.proto);
-        let mut request = Vec::with_capacity(count as usize);
+        let mut request = Vec::with_capacity((count * 2) as usize);
         mreq.generate_get_holdings(offset, count, &mut request)?;
         transport.write(&request)?;
 
@@ -84,7 +84,7 @@ impl ModbusMaster {
     ) -> result::Result<Vec<u16>, ModbusErr> {
 
         let mut mreq = ModbusRequest::new(self.id, self.proto);
-        let mut request = Vec::with_capacity(count as usize);
+        let mut request = Vec::with_capacity((count * 2) as usize);
         mreq.generate_get_inputs(offset, count, &mut request)?;
         transport.write(&request)?;
 
@@ -94,6 +94,87 @@ impl ModbusMaster {
         mreq.parse_u16(&response, &mut data).unwrap();
 
         Ok(data)
+    }
+
+    pub fn write_coil<T: io::Read + io::Write>(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        value: bool,
+    ) -> result::Result<(), ModbusErr> {
+
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(8);
+        mreq.generate_set_coil(offset, value, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        mreq.parse_ok(&response)?;
+
+        Ok(())
+    }
+
+    pub fn write_multipl_coils<
+        T: io::Read + io::Write,
+        const N: usize,
+    >(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        values: [bool; N],
+    ) ->result::Result<(), ModbusErr> {
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(8);
+        mreq.generate_set_coils_bulk(offset, &values, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        mreq.parse_ok(&response)?;
+
+        Ok(())
+    }
+
+    pub fn write_holding<T: io::Read + io::Write>(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        value: u16,
+    ) -> result::Result<(), ModbusErr> {
+
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(8);
+        mreq.generate_set_holding(offset, value, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        mreq.parse_ok(&response)?;
+
+        Ok(())
+    }
+
+    pub fn write_multipl_holding<
+        T: io::Read + io::Write,
+        const N: usize,
+    >(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        values: [u16; N],
+    ) ->result::Result<(), ModbusErr> {
+
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(8);
+        mreq.generate_set_holdings_bulk(offset, &values, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        mreq.parse_ok(&response)?;
+
+        Ok(())
     }
 
     fn read_request<T: io::Read + io::Write>(
