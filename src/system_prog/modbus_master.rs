@@ -24,13 +24,13 @@ impl ModbusMaster {
     ) -> result::Result<Vec<bool>, ModbusErr> {
         
         let mut mreq = ModbusRequest::new(self.id, self.proto);
-        let mut request = Vec::new();
+        let mut request = Vec::with_capacity(count as usize);
         mreq.generate_get_coils(offset, count, &mut request)?;
         transport.write(&request)?;
     
         let response = self.read_request(transport)?;
     
-        let mut data = Vec::new();
+        let mut data = Vec::with_capacity(count as usize);
         mreq.parse_bool(&response, &mut data).unwrap();
 
         Ok(data)
@@ -42,8 +42,9 @@ impl ModbusMaster {
         offset: u16,
         count: u16,
     ) -> result::Result<Vec<bool>, ModbusErr> {
+
         let mut mreq = ModbusRequest::new(self.id, self.proto);
-        let mut request = Vec::new();
+        let mut request = Vec::with_capacity(count as usize);
         mreq.generate_get_discretes(offset, count, &mut request)?;
         transport.write(&request)?;
 
@@ -51,6 +52,46 @@ impl ModbusMaster {
 
         let mut data = Vec::new();
         mreq.parse_bool(&response, &mut data).unwrap();
+
+        Ok(data)
+    }
+
+    pub fn read_holdings<T: io::Read + io::Write>(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        count: u16,
+    ) -> result::Result<Vec<u16>, ModbusErr> {
+
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(count as usize);
+        mreq.generate_get_holdings(offset, count, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        let mut data = Vec::new();
+        mreq.parse_u16(&response, &mut data).unwrap();
+
+        Ok(data)
+    }
+
+    pub fn read_inputs<T: io::Read + io::Write>(
+        &self,
+        transport: &mut T,
+        offset: u16,
+        count: u16,
+    ) -> result::Result<Vec<u16>, ModbusErr> {
+
+        let mut mreq = ModbusRequest::new(self.id, self.proto);
+        let mut request = Vec::with_capacity(count as usize);
+        mreq.generate_get_inputs(offset, count, &mut request)?;
+        transport.write(&request)?;
+
+        let response = self.read_request(transport)?;
+
+        let mut data = Vec::new();
+        mreq.parse_u16(&response, &mut data).unwrap();
 
         Ok(data)
     }
@@ -74,5 +115,4 @@ impl ModbusMaster {
     
         Ok(response)
     }
-
 }

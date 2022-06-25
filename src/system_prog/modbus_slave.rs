@@ -5,34 +5,44 @@ use rmodbus::ModbusProto;
 use rmodbus::ModbusFrameBuf;
 use super::modbus_error::ModbusErr;
 
-pub fn modbus_slave<T: io::Read + io::Write>(
-    transport: &mut T,
-    context: &mut ModbusContext,
-    proto: ModbusProto,
+pub struct ModbusSlave {
     id: u8,
-) -> result::Result<bool, ModbusErr> {
+    proto: ModbusProto,
+}
 
-    let mut response = Vec::with_capacity(8);
-    let mut buf: ModbusFrameBuf = [0; 256];
-
-    transport.read(&mut buf)?;
-
-    let mut frame = ModbusFrame::new(id, &buf, proto, &mut response);
-
-    frame.parse()?;
-    
-    if frame.processing_required {
-        match frame.readonly {
-            true => frame.process_read(context),
-            false => frame.process_write(context),
-        }?;
+impl ModbusSlave {
+    pub fn new (id: u8, proto: ModbusProto) -> Self {
+        Self { id, proto }
     }
 
-    if frame.response_required {
-        frame.finalize_response()?;
-        transport.write(response.as_slice())?;
-        return Ok(true);
-    }
+    pub fn handler<T: io::Read + io::Write>(
+        &self,
+        transport: &mut T,
+        context: &mut ModbusContext,
+    ) -> result::Result<(), ModbusErr> {
 
-    Ok(false)
+        loop {
+            let mut response = Vec::with_capacity(8);
+            let mut buf: ModbusFrameBuf = [0; 256];
+        
+            transport.read(&mut buf)?;
+        
+            let mut frame = ModbusFrame::new(self.id, &buf, self.proto, &mut response);
+        
+            frame.parse()?;
+            
+            if frame.processing_required {
+                match frame.readonly {
+                    true => frame.process_read(context),
+                    false => frame.process_write(context),
+                }?;
+            }
+        
+            if frame.response_required {
+                frame.finalize_response()?;
+                transport.write(response.as_slice())?;
+                break Ok(());
+            }
+        }
+    }
 }

@@ -8,12 +8,12 @@ use rmodbus::ModbusProto;
 use serial::SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
-use super::modbus_slave::modbus_slave;
+use super::modbus_slave::ModbusSlave;
 use super::modbus_error::ModbusErr;
 
 pub struct ModbusRtuSlave {
-    id: u8,
     port: RefCell<serial::SystemPort>,
+    modbus_slave: ModbusSlave,
 }
 
 impl ModbusRtuSlave {
@@ -22,7 +22,9 @@ impl ModbusRtuSlave {
 
         let port = Self::create_prot(listen, settings);
 
-        Self { id, port: RefCell::new(port) }
+        let modbus_slave = ModbusSlave::new(id, ModbusProto::Rtu);
+
+        Self { port: RefCell::new(port), modbus_slave }
     }
 
     fn create_prot(listen: &'static str, settings: serial::PortSettings) -> serial::SystemPort {
@@ -43,20 +45,12 @@ impl ModbusRtuSlave {
 impl<'a> ConstProgram for ModbusRtuSlave {
     fn run(&self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>> {
         
-        loop {
-         
-            let end = match modbus_slave(&mut *self.port.borrow_mut(), context, ModbusProto::Rtu, self.id) {
-                Ok(end) => end,
-                Err(err) => match err {
-                    ModbusErr::Io(ref e) if e.kind() == io::ErrorKind::TimedOut => return Ok(()),
-                    _ => return Err(Box::new(err)),
-                }
-            };
-
-            match end {
-                true => break Ok(()),
-                false => (),
-            }    
+        match self.modbus_slave.handler(&mut *self.port.borrow_mut(), context) {
+            Ok(_) => Ok(()),
+            Err(err) => match err {
+                ModbusErr::Io(ref e) if e.kind() == io::ErrorKind::TimedOut => return Ok(()),
+                _ => return Err(Box::new(err)),
+            }
         }
     }
 }

@@ -4,10 +4,10 @@ use rmodbus::server::context::ModbusContext;
 use rmodbus::ModbusProto;
 use std::{result, error, io};
 use super::super::fail_strig;
-use super::modbus_slave::modbus_slave;
+use super::modbus_slave::{ModbusSlave};
 pub struct ModbusTcpSlave {
-    id: u8,
     listener: TcpListener,
+    modbus_slave: ModbusSlave,
 }
 
 impl ModbusTcpSlave {
@@ -15,8 +15,9 @@ impl ModbusTcpSlave {
     pub fn new(id: u8, listen: &'static str) -> Self {
 
         let listener = Self::create_listener(listen);
+        let modbus_slave = ModbusSlave::new(id, ModbusProto::TcpUdp);
 
-        Self { id, listener}
+        Self { listener, modbus_slave }
     }
 
     fn create_listener(listen: &'static str) -> TcpListener {
@@ -39,14 +40,8 @@ impl<'a> ConstProgram for ModbusTcpSlave {
             Err(e) => return Err(Box::new(e)),
         };
 
-        loop {
-
-            let end = modbus_slave(&mut stream, context, ModbusProto::TcpUdp, self.id)?;
-
-            match end {
-                true => break Ok(()),
-                false => (),
-            }        
-        }      
+        self.modbus_slave.handler(&mut stream, context)?;
+        
+        Ok(())
     }
 }
