@@ -2,6 +2,8 @@ use std::{fmt, error, any, mem};
 use std::ops::{BitAnd, Shr, Shl, BitOr, BitXor};
 use std::cmp::PartialEq;
 
+use rmodbus::server::context::ModbusContext;
+
 #[derive(Debug)]
 pub struct Overflow {
     type_name: String,
@@ -75,6 +77,31 @@ impl BitWord for i16 {}
 impl BitWord for usize {}
 impl BitWord for isize {}
 
+trait ToReg {
+    type ReturnType;
+    fn to_be_reg(&self) -> Self::ReturnType;
+    fn to_ne_reg(&self) -> Self::ReturnType;
+}
+
+impl ToReg for u32 {
+    type ReturnType = [u16; 2];
+
+    fn to_be_reg(&self) -> Self::ReturnType {
+        let bytes = self.to_be_bytes();
+        let first = u16::from_be_bytes([bytes[0], bytes[1]]);
+        let second = u16::from_be_bytes([bytes[2], bytes[3]]);
+        [first, second]
+    }
+
+    fn to_ne_reg(&self) -> Self::ReturnType {
+        let bytes = self.to_be_bytes();
+        let first = u16::from_be_bytes([bytes[0], bytes[1]]);
+        let second = u16::from_be_bytes([bytes[2], bytes[3]]);
+        [second, first]
+    }
+}
+
+
 #[test]
 fn test_get_bit() {
 
@@ -111,4 +138,20 @@ fn test_set_bit() {
     let expect = 100103;
 
     assert_eq!(result, expect);
+}
+
+#[test]
+fn test_to_reg() {
+    let mut context = ModbusContext::new();
+    context.set_holdings_from_u32(33, 603159).unwrap();
+    let value = context.get_holdings_as_u32(33).unwrap();
+    let mut arr = vec![];
+    context.get_holdings_bulk(33, 2, &mut arr).unwrap();
+
+    let test1 = value.to_be_reg();
+    let test2 = value.to_ne_reg();
+
+    dbg!(value, arr, test1, test2);
+
+    assert!(false);
 }
