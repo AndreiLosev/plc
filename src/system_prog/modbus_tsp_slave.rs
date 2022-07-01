@@ -12,9 +12,9 @@ pub struct ModbusTcpSlave {
 
 impl ModbusTcpSlave {
 
-    pub fn new(id: u8, listen: &'static str) -> Self {
+    pub fn new(id: u8, socket: &'static str) -> Self {
 
-        let listener = Self::create_listener(listen);
+        let listener = Self::create_listener(socket);
         let modbus_slave = ModbusSlave::new(id, ModbusProto::TcpUdp);
 
         Self { listener, modbus_slave }

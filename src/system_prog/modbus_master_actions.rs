@@ -1,4 +1,5 @@
 use std::time;
+use super::modbus_error::ModbusErr;
 use rmodbus::server::context::ModbusContext;
 
 pub struct ActonData<U, K> {
@@ -8,10 +9,50 @@ pub struct ActonData<U, K> {
     handler: fn(&mut ModbusContext, U) -> K,
 }
 
+impl<U, K> ActonData<U, K> {
+    pub fn get_offset(&self) -> u16 { self.offset }
+    pub fn get_count(&self) -> u16 { self.count }
+    
+    pub fn need_run(&mut self, context: &mut ModbusContext) -> Result<bool, ModbusErr> {
+        self.type_action.need_run(context)
+    }
+    
+    pub fn handler(&self, context: &mut ModbusContext, data: U) -> K {
+        let exec = self.handler;
+        exec(context, data)
+    }
+}
+
 pub enum TypeAction {
     Cycle(time::Duration, time::Instant),
     FrontColi(u16, bool),
     FrontDiscrete(u16, bool),
+}
+
+impl TypeAction {
+    fn need_run(&mut self, context: &mut ModbusContext) -> Result<bool, ModbusErr> {
+        match self {
+            Self::Cycle(t, i) => {
+                if *t <= i.elapsed() {
+                    *i = time::Instant::now();
+                    return Ok(true);
+                }
+                Ok(false)
+            },
+            Self::FrontColi(adr, b) => {
+                let bit = context.get_coil(*adr)?;
+                let need_run = bit && !*b;
+                *b = bit;
+                Ok(need_run)
+            },
+            Self::FrontDiscrete(adr, b) => {
+                let bit = context.get_discrete(*adr)?;
+                let need_run = bit && !*b;
+                *b = bit;
+                Ok(need_run)
+            },
+        }
+    }    
 }
 
 pub enum Acton {
@@ -300,5 +341,18 @@ impl Acton {
         let type_action = TypeAction::FrontDiscrete(coil, false); 
         
         Self::WriteHoldings(ActonData { offset, count: 0, type_action, handler })
+    }
+
+    pub fn need_run(&mut self, context: &mut ModbusContext) -> Result<bool, ModbusErr> {
+        match self {
+            Self::ReadCoils(data) => { data.need_run(context) }
+            Self::ReadDiscretes(data) => { data.need_run(context) }
+            Self::ReadHoldings(data) => { data.need_run(context) }
+            Self::ReadInputs(data) => { data.need_run(context) }
+            Self::WriteCoil(data) => { data.need_run(context) }
+            Self::WriteCoils(data) => { data.need_run(context) }
+            Self::WriteHolding(data) => { data.need_run(context) }
+            Self::WriteHoldings(data) => { data.need_run(context) }
+        }
     }
 }
