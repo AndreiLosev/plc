@@ -115,14 +115,11 @@ impl ModbusMaster {
         Ok(())
     }
 
-    pub fn write_multipl_coils<
-        T: io::Read + io::Write,
-        const N: usize,
-    >(
+    pub fn write_multipl_coils<T: io::Read + io::Write>(
         &self,
         transport: &mut T,
         offset: u16,
-        values: [bool; N],
+        values: Vec<bool>,
     ) ->result::Result<(), ModbusErr> {
         let mut mreq = ModbusRequest::new(self.id, self.proto);
         let mut request = Vec::with_capacity(8);
@@ -155,14 +152,11 @@ impl ModbusMaster {
         Ok(())
     }
 
-    pub fn write_multipl_holding<
-        T: io::Read + io::Write,
-        const N: usize,
-    >(
+    pub fn write_multipl_holding<T: io::Read + io::Write>(
         &self,
         transport: &mut T,
         offset: u16,
-        values: [u16; N],
+        values: Vec<u16>,
     ) ->result::Result<(), ModbusErr> {
 
         let mut mreq = ModbusRequest::new(self.id, self.proto);
