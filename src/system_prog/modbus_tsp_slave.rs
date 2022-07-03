@@ -22,7 +22,7 @@ impl ModbusTcpSlave {
 
     fn create_listener(listen: &'static str) -> TcpListener {
         let listener = TcpListener::bind(listen)
-        .unwrap_or_else(|e| panic!("{}", fail_strig(&e)));
+            .unwrap_or_else(|e| panic!("{}", fail_strig(&e)));
         listener.set_nonblocking(true)
             .unwrap_or_else(|e| panic!("{}", fail_strig(&e)));
 

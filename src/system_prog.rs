@@ -6,3 +6,4 @@ pub mod modbus_error;
 pub mod modbus_tsp_master;
 pub mod modbus_master_actions;
 pub mod timeaut_heandler;
+pub mod modbus_rtu_master;
