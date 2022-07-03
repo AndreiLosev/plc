@@ -2,8 +2,9 @@ use std::{io, result};
 use rmodbus::client::ModbusRequest;
 use rmodbus::guess_response_frame_len;
 use rmodbus::ModbusProto;
+use rmodbus::server::context::ModbusContext;
 use super::modbus_error::ModbusErr;
-
+use super::modbus_master_actions::Acton;
 
 pub struct ModbusMaster {
     id: u8,
@@ -169,6 +170,51 @@ impl ModbusMaster {
         mreq.parse_ok(&response)?;
 
         Ok(())
+    }
+
+    pub fn execute_action<T: io::Read + io::Write>(&self, action: &Acton, context: &mut ModbusContext, stream: &mut T) -> result::Result<(), ModbusErr> {
+        match action {
+            Acton::ReadCoils(data) => {
+                let request = self.read_coils(stream, data.get_offset(), data.get_count())?;
+                data.handler(context, request);
+                Ok(())
+            },
+            Acton::ReadDiscretes(data) => {
+                let request = self.read_discretes(stream, data.get_offset(), data.get_count())?;
+                data.handler(context, request);
+                Ok(())
+            },
+            Acton::ReadHoldings(data) => {
+                let request = self.read_holdings(stream, data.get_offset(), data.get_count())?;
+                data.handler(context, request);
+                Ok(())
+            },
+            Acton::ReadInputs(data) => {
+                let request = self.read_holdings(stream, data.get_offset(), data.get_count())?;
+                data.handler(context, request);
+                Ok(())
+            },
+            Acton::WriteCoil(data) => {
+                let value = data.handler(context, ());
+                self.write_coil(stream, data.get_offset(), value)?;
+                Ok(())
+            },
+            Acton::WriteCoils(data) => {
+                let values = data.handler(context, ());
+                self.write_multipl_coils(stream, data.get_offset(), values)?;
+                Ok(())
+            },
+            Acton::WriteHolding(data) => {
+                let value = data.handler(context, ());
+                self.write_holding(stream, data.get_offset(), value)?;
+                Ok(())
+            },
+            Acton::WriteHoldings(data) => {
+                let values = data.handler(context, ());
+                self.write_multipl_holding(stream, data.get_offset(), values)?;
+                Ok(())
+            },
+        }
     }
 
     fn read_request<T: io::Read + io::Write>(
