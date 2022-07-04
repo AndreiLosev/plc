@@ -8,9 +8,8 @@ use std::{io,  result, error};
 use super::timeaut_heandler::TimeautHeandler;
 use serial::SerialPort;
 pub use serial::PortSettings;
-pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
 
-pub struct ModbusTcpMaster<const N: usize> {
+pub struct ModbusRtuMaster<const N: usize> {
     port: &'static str,
     settings: serial::PortSettings,
     modbus_master: ModbusMaster,
@@ -18,7 +17,7 @@ pub struct ModbusTcpMaster<const N: usize> {
     timeout_heandler: TimeautHeandler,
 }
 
-impl<const N: usize> ModbusTcpMaster<N> {
+impl<const N: usize> ModbusRtuMaster<N> {
     pub fn new(id: u8, port: &'static str, settings: serial::PortSettings, actions: [Acton; N], timeout_heandler: TimeautHeandler) -> Self {
         
         let modbus_master = ModbusMaster::new(id, ModbusProto::TcpUdp);
@@ -37,7 +36,7 @@ impl<const N: usize> ModbusTcpMaster<N> {
     }
 }
 
-impl<const N: usize> ConstProgram for ModbusTcpMaster<N> {
+impl<const N: usize> ConstProgram for ModbusRtuMaster<N> {
     fn run(&self, context: &mut ModbusContext) -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         let mut serial_port = self.create_prot()?;

@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 
-pub struct Ton(Option<Instant>);
-pub struct Tof(Option<Instant>);
-pub struct Tp(Option<Instant>);
+pub struct Ton_(Option<Instant>);
+pub struct Tof_(Option<Instant>);
+pub struct Tp_(Option<Instant>);
 
 pub struct Timer<T> {
     in1: bool,
@@ -21,14 +21,14 @@ impl<T> Timer<T> {
 
 }
 
-impl Timer<Ton> {
-    pub fn new_ton(pt: Duration) -> Self {
+impl Timer<Ton_> {
+    pub fn new(pt: Duration) -> Self {
         Self {
             in1: false,
             pt,
             q: false,
             et: Duration::ZERO,
-            timer_type: Ton(None),
+            timer_type: Ton_(None),
         }
     }
 
@@ -55,20 +55,20 @@ impl Timer<Ton> {
             }
         }
 
-        self.q = self.et == self.pt;
+        self.q = self.et == self.pt && in1;
 
     }
     
 }
 
-impl Timer<Tof> {
-    pub fn new_tof(pt: Duration) -> Self {
+impl Timer<Tof_> {
+    pub fn new(pt: Duration) -> Self {
         Self {
             in1: false,
             pt,
             q: false,
             et: Duration::ZERO,
-            timer_type: Tof(None),
+            timer_type: Tof_(None),
         }
     }
 
@@ -95,14 +95,14 @@ impl Timer<Tof> {
     }
 }
 
-impl Timer<Tp> {
-    pub fn new_tp(pt: Duration) -> Self {
+impl Timer<Tp_> {
+    pub fn new(pt: Duration) -> Self {
         Self {
             in1: false,
             pt,
             q: false,
             et: Duration::ZERO,
-            timer_type: Tp(None),
+            timer_type: Tp_(None),
         }
     }
 
@@ -130,12 +130,16 @@ impl Timer<Tp> {
     }
 }
 
+pub type Ton = Timer<Ton_>;
+pub type Tof = Timer<Tof_>;
+pub type Tp = Timer<Tp_>;
+
 
 #[test]
 fn test_ton() {
 
     let duration = Duration::from_millis(20);
-    let mut timer = Timer::new_ton(duration);
+    let mut timer = Ton::new(duration);
 
     let mut result = [Duration::ZERO, Duration::ZERO];
 
@@ -189,7 +193,7 @@ fn test_ton() {
 #[test]
 fn test_tof() {
     let duration = Duration::from_millis(20);
-    let mut timer = Timer::new_tof(duration);
+    let mut timer = Tof::new(duration);
 
     let mut result = [Duration::ZERO, Duration::ZERO];
 
@@ -242,7 +246,7 @@ fn test_tof() {
 #[test]
 fn test_tp() {
     let duration = Duration::from_millis(20);
-    let mut timer = Timer::new_tp(duration);
+    let mut timer = Tp::new(duration);
 
     let mut result = [Duration::ZERO, Duration::ZERO];
 

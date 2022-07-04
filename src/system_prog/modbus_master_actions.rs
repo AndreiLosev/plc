@@ -1,4 +1,4 @@
-use std::{time, ops::{SubAssign, BitAndAssign}};
+use std::{time};
 use super::modbus_error::ModbusErr;
 use rmodbus::server::context::ModbusContext;
 use std::cell::RefCell;
@@ -34,8 +34,10 @@ impl TypeAction {
     fn need_run(&self, context: &mut ModbusContext) -> Result<bool, ModbusErr> {
         match &self {
             Self::Cycle(t, i) => {
-                if t <= &i.borrow().elapsed() {
-                    i.borrow_mut().sub_assign(i.borrow().elapsed());
+                let time_left = i.borrow().elapsed();
+                if t <= &time_left {
+                    // dbg!(time_left, i.borrow().elapsed());
+                    i.borrow_mut().clone_from(&time::Instant::now());
                     return Ok(true);
                 }
                 Ok(false)
@@ -43,13 +45,13 @@ impl TypeAction {
             &Self::FrontColi(adr, b) => {
                 let bit = context.get_coil(*adr)?;
                 let need_run = bit && !*b.borrow();
-                b.borrow_mut().bitand_assign(bit);
+                b.borrow_mut().clone_from(&bit);
                 Ok(need_run)
             },
             &Self::FrontDiscrete(adr, b) => {
                 let bit = context.get_discrete(*adr)?;
                 let need_run = bit && !*b.borrow();
-                b.borrow_mut().bitand_assign(bit);
+                b.borrow_mut().clone_from(&bit);
                 Ok(need_run)
             },
         }

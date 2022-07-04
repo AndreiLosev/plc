@@ -75,7 +75,7 @@ impl BitWord for i16 {}
 impl BitWord for usize {}
 impl BitWord for isize {}
 
-trait ToReg {
+pub trait ToReg {
     type ReturnType;
     fn to_reg(&self) -> Self::ReturnType;
 }
@@ -173,7 +173,7 @@ impl  ToReg for f32 {
     }
 }
 
-impl  ToReg for f64 {
+impl ToReg for f64 {
     type ReturnType = [u16; 4];
 
     fn to_reg(&self) -> Self::ReturnType {

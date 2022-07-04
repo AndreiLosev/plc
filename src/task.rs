@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use std::{error, result, cmp};
 use rmodbus::server::context::{ModbusContext};
 use task_errors::{TaskTimeOutError};
-use super::pls_std::bitword::BitWord;
+use super::pls_std::BitWord;
 
 pub trait MutProgram {
     fn run(&mut self, context: &mut ModbusContext) -> result::Result<(), Box<dyn error::Error>>;
