@@ -1,9 +1,9 @@
 use std::net::TcpListener;
-use super::super::task::ConstProgram;
+use crate::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::ModbusProto;
 use std::{result, error, io};
-use super::super::fail_strig;
+use crate::fail_strig;
 use super::modbus_slave::{ModbusSlave};
 pub struct ModbusTcpSlave {
     listener: TcpListener,

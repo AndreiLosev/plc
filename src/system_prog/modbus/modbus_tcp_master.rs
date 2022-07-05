@@ -3,7 +3,7 @@ use super::modbus_master_actions::{Acton};
 use super::modbus_error::ModbusErr;
 use rmodbus::ModbusProto;
 use rmodbus::server::context::ModbusContext;
-use super::super::task::{ConstProgram};
+use crate::task::ConstProgram;
 use std::{net, time, io};
 use super::timeaut_heandler::TimeautHeandler;
 

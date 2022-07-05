@@ -1,8 +1,8 @@
 use std::{result, error, io, time::Duration};
 use std::cell::RefCell;
 
-use super::super::fail_strig;
-use super::super::task::ConstProgram;
+use crate::fail_strig;
+use crate::task::ConstProgram;
 use rmodbus::server::context::ModbusContext;
 use rmodbus::ModbusProto;
 use serial::SerialPort;
