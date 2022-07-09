@@ -19,5 +19,5 @@ pub use timeaut_heandler::TimeautHeandler;
 pub use modbus_rtu_master::ModbusRtuMaster;
 
 pub mod serial_settings {
-    pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl};
+    pub use serial::{BaudRate, Parity, CharSize, StopBits, FlowControl, PortSettings};
 }
