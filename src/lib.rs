@@ -2,7 +2,6 @@ pub mod task;
 pub mod pls_std;
 pub mod system_prog;
 
-
 mod config;
 
 pub use rmodbus::server::context::ModbusContext;
@@ -19,10 +18,10 @@ pub struct Plc<'a> {
 }
 
 impl<'a> Plc<'a> {
-    pub fn new<const N: usize>(tasks: [task::Task<'a>; N]) -> Self {
-
-        let context = ModbusContext::new();
-
+    pub fn new<const N: usize>(
+        tasks: [task::Task<'a>; N],
+        context: ModbusContext,
+    ) -> Self {
         let mut task_event: Vec<task::Task> = Vec::new();
         let mut bacground: Vec<task::Task> = Vec::new();
 
